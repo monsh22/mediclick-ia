@@ -6,8 +6,8 @@ import { colors, shadow, MEDI_AVATAR } from '../theme';
 import { Button, Input, Muted, ErrorText, EmergencyBanner, Blob, Ring, Diamond, Avatar } from '../components/ui';
 
 export default function LoginScreen({ onLogin, goRegister }) {
-  const [email, setEmail] = useState('paciente@mediclick.com');
-  const [password, setPassword] = useState('Paciente123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,15 +56,6 @@ export default function LoginScreen({ onLogin, goRegister }) {
         </View>
 
         <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-          <View style={{ backgroundColor: colors.purpleSoft, borderRadius: 20, padding: 14, marginBottom: 12, flexDirection: 'row' }}>
-            <Text style={{ fontSize: 22, marginRight: 10 }}>🧪</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '900', color: colors.purple, marginBottom: 2 }}>Cuentas de prueba</Text>
-              <Muted style={{ fontSize: 13 }}>Paciente: paciente@mediclick.com / Paciente123</Muted>
-              <Muted style={{ fontSize: 13 }}>Médico: ana.lopez@mediclick.com / Medico123</Muted>
-              <Muted style={{ fontSize: 13 }}>Admin: admin@mediclick.com / Admin123</Muted>
-            </View>
-          </View>
           <EmergencyBanner compact />
           <Muted style={{ textAlign: 'center', fontSize: 11 }}>Servidor: {API_URL}</Muted>
         </View>

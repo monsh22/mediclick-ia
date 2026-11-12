@@ -1,0 +1,64 @@
+# =============================================================
+#  MediClick AI - Ajustes para PRODUCCIÓN (servidor en la nube)
+#  Se usa JUNTO con docker-compose.yml:
+#
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+#  Qué cambia respecto a tu laptop:
+#   - Caddy pone HTTPS automático (certificados gratis de Let's Encrypt)
+#   - Dirección FIJA para n8n -> Telegram ya no necesita túnel
+#   - PostgreSQL, Redis y RabbitMQ dejan de estar abiertos a internet
+#   - pgAdmin y el panel de RabbitMQ solo se ven por túnel SSH
+#  Necesita Docker Compose 2.24 o más nuevo (por "!reset").
+# =============================================================
+
+services:
+  # --- Cerramos puertos que NO deben quedar públicos en internet ---
+  postgres:
+    ports: !reset []
+    restart: unless-stopped
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+  rabbitmq:
+    ports: !reset ["127.0.0.1:15672:15672"]   # panel solo por túnel SSH
+    restart: unless-stopped
+  pgadmin:
+    ports: !reset ["127.0.0.1:5050:80"]       # solo por túnel SSH
+    restart: unless-stopped
+  gateway:
+    ports: !reset []                          # ahora entra por Caddy (HTTPS)
+
+  n8n:
+    ports: !reset []                          # ahora entra por Caddy (HTTPS)
+    restart: unless-stopped
+    environment:
+      N8N_HOST: ${N8N_DOMAIN}
+      N8N_PROTOCOL: https
+      N8N_SECURE_COOKIE: "true"
+      WEBHOOK_URL: https://${N8N_DOMAIN}/
+
+  # --- Puerta de entrada con HTTPS ---
+  caddy:
+    image: caddy:2
+    container_name: mediclick-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      N8N_DOMAIN: ${N8N_DOMAIN}
+      APP_DOMAIN: ${APP_DOMAIN}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./mobile/dist:/srv/app:ro              # versión web de la app (opcional)
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - gateway
+      - n8n
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

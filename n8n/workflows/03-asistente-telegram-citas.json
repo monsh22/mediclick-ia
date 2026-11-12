@@ -1,0 +1,531 @@
+{
+  "name": "MediClick - Medi, asistente de citas en Telegram (AI Agent)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000001",
+      "name": "Mensaje de Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "mediclick-asistente"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://patient-service:3001/internal/patients/telegram",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chatId: String($json.message.chat.id), name: [$json.message.from.first_name, $json.message.from.last_name].filter(Boolean).join(' ') }) }}",
+        "options": {}
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000002",
+      "name": "Identificar paciente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://triage-service:3004/internal/triage/check",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ userId: $json.id, channel: 'telegram', message: $('Mensaje de Telegram').first().json.message.text || '' }) }}",
+        "options": {}
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000003",
+      "name": "Revisar emergencia (911)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.emergency }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000004",
+      "name": "¿Es emergencia?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Mensaje de Telegram').first().json.message.chat.id }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000005",
+      "name": "Responder emergencia",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Mensaje de Telegram').first().json.message.text || '(el usuario mandó algo que no es texto)' }}",
+        "options": {
+          "systemMessage": "=Eres Medi, el asistente virtual inteligente de MediClick AI 🩺✨ en Telegram. Tu tono es empático, profesional, claro y DIDÁCTICO (explicas con palabras sencillas). Usas emojis de forma adecuada.\n\nHoy es {{ $now.setZone('America/Mexico_City').setLocale('es').toFormat(\"cccc d 'de' LLLL 'de' yyyy, HH:mm\") }} (hora del centro de México). Fecha ISO de hoy: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }}.\nPaciente: {{ $('Identificar paciente').first().json.name }} {{ $('Identificar paciente').first().json.isNew ? '(es nuevo, dale la bienvenida)' : '' }}\nAlergias registradas: {{ $('Identificar paciente').first().json.allergies || 'ninguna registrada aún' }}\nID de chat de Telegram del paciente: {{ $('Mensaje de Telegram').first().json.message.chat.id }} (si lo pide para vincular la app, dáselo y dile que lo pegue en Perfil → ID de chat de Telegram).\n\n1. PRESENTACIÓN:\nSi el usuario saluda (hola, /start) o pregunta qué haces, responde:\n\"¡Hola! 👋 Soy Medi, el asistente inteligente de MediClick AI 🩺✨.\"\nLuego explica brevemente:\n• 🩺 Triaje médico: oriento según tus síntomas y te sugiero la especialidad adecuada.\n• 👩‍⚕️ Médicos y horarios: te muestro quién atiende y cuándo hay lugar.\n• 📅 Citas: te ayudo a agendar, reagendar o cancelar.\n• 📋 Expediente: guardo tus alergias, tipo de sangre y medicamentos para tu médico.\n• 🔔 Recordatorios: te aviso 24 h y 2 h antes de tu cita.\nCierra con: \"¿Cómo puedo asistirte hoy?\"\n\n2. TRIAJE (didáctico, en 2 pasos):\na) Si cuenta un síntoma, empieza con 1 frase empática y escribe \"Para orientarte mejor, necesito conocer un poco más:\" seguido de 3 a 5 preguntas NUMERADAS, cortas y con ejemplos entre paréntesis (desde cuándo, intensidad del 1 al 10, constante o intermitente, zona exacta, qué lo empeora o alivia, otros síntomas, si ya tomó algo).\nb) Cuando responda, usa \"orientar_especialidad\" si lo necesitas y explica así:\n📝 Lo que me contaste: (resumen en 1 línea)\n🩺 Te recomiendo: (especialidad)\n💡 ¿Por qué?: (1-2 oraciones sencillas)\n📋 En la consulta: (qué suele pasar)\n🏠 Mientras tanto: (cuidados generales SIN medicamentos)\n⚠️ Ve a urgencias si: (2-3 señales de alarma)\nTermina ofreciendo ver horarios. Recuerda que es una orientación previa y no sustituye una consulta médica.\n\n3. MÉDICOS Y HORARIOS:\n- \"ver_medicos\": directorio de médicos (todos o de una especialidad), con consultorio, horario y días.\n- \"ver_disponibilidad\": horarios LIBRES de una especialidad (y fecha AAAA-MM-DD si la pidió; convierte \"mañana\", \"el lunes\", etc. usando la fecha de hoy). Muestra máximo 6 horas por médico, por ejemplo: \"Lunes 10 de nov · Dr. Carlos Méndez: 09:00, 09:30, 10:00\".\n\n4. AGENDAR:\n- Antes de agendar, muestra un resumen (especialidad, médico, día y hora) y pide confirmación. Solo cuando diga \"sí\" usa \"agendar_cita\" con el doctorId, fecha (AAAA-MM-DD), hora (HH:MM) y un motivo que resuma sus síntomas (le sirve al médico).\n- Si no tiene alergias registradas, después de agendar pregúntale amablemente si tiene alergias o toma algún medicamento, para guardarlo en su expediente.\n- NO pidas nombre, correo ni ID de Telegram: el paciente ya está identificado.\n\n5. EXPEDIENTE:\n- \"ver_expediente\": muestra sus datos registrados.\n- \"actualizar_expediente\": guarda lo que el paciente te diga (alergias, tipo de sangre, enfermedades crónicas, medicamentos actuales, teléfono, fecha de nacimiento, contacto de emergencia). Solo llena los campos que te dio; deja los demás vacíos. Confirma qué guardaste.\n- Todo lo que guardes también aparece en la app MediClick y lo ve su médico.\n\n6. VER, CANCELAR O REAGENDAR:\nUsa \"mis_citas\" para ver sus citas y obtener el citaId. Confirma con el paciente y luego usa \"cancelar_cita\" o \"reagendar_cita\".\n\n7. REGLAS:\n- NUNCA des diagnósticos, ni recetes medicamentos o dosis.\n- Si menciona síntomas graves (dolor de pecho, falta de aire, desmayo, sangrado abundante, accidente, ideas de hacerse daño), dile que llame al 911 de inmediato y no agendes.\n- Solo hablas de salud, de la clínica y de citas. Si preguntan otra cosa, responde amablemente que solo puedes ayudar con eso.\n- Usa ÚNICAMENTE datos que devuelvan las herramientas; nunca inventes médicos ni horarios.\n- Si una herramienta responde \"ok\": false, explica el error con palabras simples y ofrece alternativas.\n- No muestres IDs (doctorId, citaId) al paciente.\n- Escribe en español, en texto plano con emojis, sin asteriscos ni Markdown.",
+          "maxIterations": 10
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000006",
+      "name": "Medi (Asistente IA)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        920,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Mensaje de Telegram').first().json.message.chat.id }}",
+        "text": "={{ $json.output.replaceAll('**', '').replaceAll('__', '') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000007",
+      "name": "Responder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1300,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000008",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        700,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'tg-' + $('Mensaje de Telegram').first().json.message.chat.id }}",
+        "contextWindowLength": 12
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000009",
+      "name": "Memoria de la conversación",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        860,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Sugiere la especialidad médica adecuada según los síntomas que describe el paciente. Úsala cuando no sepa a qué especialista ir.",
+        "method": "POST",
+        "url": "http://triage-service:3004/internal/triage/chat",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: 'telegram', userId: $('Identificar paciente').first().json.id, message: $fromAI('sintomas', 'Síntomas o motivo de consulta tal como lo describe el paciente', 'string') }) }}"
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000010",
+      "name": "orientar_especialidad",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Devuelve los médicos y horarios LIBRES de una especialidad. Si no das fecha, devuelve los próximos 3 días con lugar. Devuelve doctorId, fecha (AAAA-MM-DD) y horasLibres (HH:MM).",
+        "method": "GET",
+        "url": "http://appointment-service:3002/internal/availability",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "specialty",
+              "value": "={{ $fromAI('especialidad', 'Especialidad, por ejemplo Cardiología, Pediatría o Medicina General', 'string') }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $fromAI('fecha', 'Fecha AAAA-MM-DD, o texto vacío para buscar los próximos días', 'string') }}"
+            }
+          ]
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000011",
+      "name": "ver_disponibilidad",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Agenda una cita para el paciente. Usa SOLO después de que el paciente confirme. Requiere doctorId, fecha y hora exactos devueltos por ver_disponibilidad.",
+        "method": "POST",
+        "url": "http://appointment-service:3002/internal/appointments",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ patientId: $('Identificar paciente').first().json.id, patientName: $('Identificar paciente').first().json.name, doctorId: $fromAI('doctorId', 'doctorId exacto que devolvió ver_disponibilidad', 'string'), date: $fromAI('fecha', 'Fecha de la cita AAAA-MM-DD', 'string'), time: $fromAI('hora', 'Hora de la cita HH:MM en 24 horas, por ejemplo 09:30', 'string'), reason: $fromAI('motivo', 'Motivo breve de la consulta', 'string') }) }}"
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000012",
+      "name": "agendar_cita",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Lista las próximas citas programadas del paciente, con su citaId.",
+        "method": "GET",
+        "url": "=http://appointment-service:3002/internal/patients/{{ $('Identificar paciente').first().json.id }}/appointments",
+        "options": {}
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000013",
+      "name": "mis_citas",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1420,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Cancela una cita del paciente. Requiere el citaId que devuelve mis_citas. Usa solo después de que el paciente confirme.",
+        "method": "POST",
+        "url": "=http://appointment-service:3002/internal/appointments/{{ $fromAI('citaId', 'citaId de la cita a cancelar, obtenido de mis_citas', 'string') }}/cancel",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ patientId: $('Identificar paciente').first().json.id }) }}"
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000014",
+      "name": "cancelar_cita",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Cambia la fecha y hora de una cita existente con el mismo médico. Requiere citaId (de mis_citas) y una fecha/hora libre de ver_disponibilidad.",
+        "method": "POST",
+        "url": "=http://appointment-service:3002/internal/appointments/{{ $fromAI('citaId', 'citaId de la cita a reagendar, obtenido de mis_citas', 'string') }}/reschedule",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ patientId: $('Identificar paciente').first().json.id, date: $fromAI('fecha', 'Nueva fecha AAAA-MM-DD', 'string'), time: $fromAI('hora', 'Nueva hora HH:MM en 24 horas', 'string') }) }}"
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000015",
+      "name": "reagendar_cita",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1700,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Directorio de médicos de la clínica con especialidad, consultorio, horario y días de atención. Puedes filtrar por especialidad o dejarla vacía para ver todos.",
+        "method": "GET",
+        "url": "http://appointment-service:3002/internal/doctors",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "specialty",
+              "value": "={{ $fromAI('especialidad', 'Especialidad a filtrar, o texto vacío para todos', 'string') }}"
+            }
+          ]
+        }
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000016",
+      "name": "ver_medicos",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Muestra el expediente del paciente: alergias, tipo de sangre, enfermedades crónicas, medicamentos actuales, teléfono, fecha de nacimiento y contacto de emergencia.",
+        "method": "GET",
+        "url": "=http://patient-service:3001/internal/patients/{{ $('Identificar paciente').first().json.id }}/record",
+        "options": {}
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000017",
+      "name": "ver_expediente",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Guarda datos del expediente médico del paciente. Llena SOLO los campos que el paciente mencionó y deja los demás como texto vacío.",
+        "method": "POST",
+        "url": "=http://patient-service:3001/internal/patients/{{ $('Identificar paciente').first().json.id }}/record",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ alergias: $fromAI('alergias', 'Alergias que menciona, o vacío', 'string'), tipoSangre: $fromAI('tipoSangre', 'Tipo de sangre como O+, A-, AB+, o vacío', 'string'), enfermedadesCronicas: $fromAI('enfermedadesCronicas', 'Enfermedades crónicas como diabetes o hipertensión, o vacío', 'string'), medicamentosActuales: $fromAI('medicamentosActuales', 'Medicamentos que toma actualmente, o vacío', 'string'), telefono: $fromAI('telefono', 'Teléfono, o vacío', 'string'), fechaNacimiento: $fromAI('fechaNacimiento', 'Fecha de nacimiento AAAA-MM-DD, o vacío', 'string'), contactoEmergencia: $fromAI('contactoEmergencia', 'Nombre y teléfono de contacto de emergencia, o vacío', 'string') }) }}"
+      },
+      "id": "c3c3c3c3-0003-4000-8000-000000000018",
+      "name": "actualizar_expediente",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        680
+      ]
+    }
+  ],
+  "connections": {
+    "Mensaje de Telegram": {
+      "main": [
+        [
+          {
+            "node": "Identificar paciente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar paciente": {
+      "main": [
+        [
+          {
+            "node": "Revisar emergencia (911)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar emergencia (911)": {
+      "main": [
+        [
+          {
+            "node": "¿Es emergencia?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es emergencia?": {
+      "main": [
+        [
+          {
+            "node": "Responder emergencia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Medi (Asistente IA)": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria de la conversación": {
+      "ai_memory": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "orientar_especialidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ver_disponibilidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mis_citas": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cancelar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reagendar_cita": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ver_medicos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ver_expediente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_expediente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Medi (Asistente IA)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

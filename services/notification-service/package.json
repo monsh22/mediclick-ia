@@ -1,0 +1,17 @@
+{
+  "name": "notification-service",
+  "version": "1.0.0",
+  "description": "MediClick AI - Notification & Messaging Service (recordatorios 24h/2h y confirmaciones)",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node --watch src/main.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "bullmq": "^5.34.0",
+    "express": "^4.21.2",
+    "ioredis": "^5.4.2"
+  }
+}

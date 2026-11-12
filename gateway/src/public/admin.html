@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MediClick Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F6F4FF; --card: #FFFFFF; --text: #1E2A3B; --muted: #6B7A90; --border: #ECE8F7;
+    --primary: #0F766E; --primary-soft: #D5F2EE;
+    --lav: #B9A7FF; --lav-soft: #EEE9FF; --mint: #9DE3C9; --mint-soft: #E2F8EF;
+    --peach: #FFB59E; --peach-soft: #FFEDE6; --sky: #9CCBFF; --sky-soft: #E6F1FF;
+    --lemon: #FFE08A; --lemon-soft: #FFF7DB; --rose: #FFA8C5; --rose-soft: #FFE9F1;
+    --danger: #E5383B; --danger-soft: #FDECEC; --success: #16A34A;
+    --shadow: 0 6px 24px rgba(60, 40, 140, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Nunito', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  /* Fondo con formas pastel */
+  .blob { position: fixed; border-radius: 50%; filter: blur(2px); z-index: 0; pointer-events: none; }
+  .b1 { width: 420px; height: 420px; background: var(--lav-soft); top: -140px; right: -120px; }
+  .b2 { width: 300px; height: 300px; background: var(--mint-soft); bottom: -100px; left: -80px; }
+  .b3 { width: 160px; height: 160px; background: var(--peach-soft); top: 40%; right: 6%; }
+  .b4 { width: 90px; height: 90px; background: var(--lemon-soft); top: 18%; left: 32%; }
+  .wrap { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+
+  /* Menú lateral */
+  nav { width: 240px; padding: 22px 16px; background: rgba(255,255,255,0.75); backdrop-filter: blur(8px); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 20px; margin-bottom: 26px; }
+  .logo .ic { width: 42px; height: 42px; border-radius: 14px; background: var(--primary); display: grid; place-items: center; font-size: 22px; transform: rotate(-8deg); }
+  .logo small { display: block; font-size: 11px; color: var(--muted); font-weight: 700; }
+  nav button { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 12px 14px; border-radius: 14px; font: inherit; font-weight: 800; color: var(--muted); cursor: pointer; margin-bottom: 4px; text-align: left; }
+  nav button:hover { background: var(--lav-soft); color: var(--text); }
+  nav button.active { background: var(--primary); color: #fff; }
+  nav .me { margin-top: 24px; padding: 12px; border-radius: 16px; background: var(--mint-soft); display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  nav .me img { width: 38px; height: 38px; border-radius: 12px; background: #fff; }
+
+  main { flex: 1; padding: 26px 28px 60px; min-width: 0; }
+  h1 { font-size: 26px; margin: 0 0 4px; font-weight: 900; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  input, select, textarea { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--border); background: #fff; color: var(--text); }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--lav); border-color: transparent; }
+  .btn { border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; background: var(--primary); color: #fff; white-space: nowrap; }
+  .btn.soft { background: var(--lav-soft); color: #5B45C9; }
+  .btn.mint { background: var(--mint-soft); color: #0E7A55; }
+  .btn.danger { background: var(--danger-soft); color: var(--danger); }
+  .btn.sm { padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  /* Tarjetas de estadísticas */
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat { border-radius: 22px; padding: 18px; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+  .stat::after { content: ''; position: absolute; width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,.45); right: -26px; top: -26px; }
+  .stat .n { font-size: 32px; font-weight: 900; }
+  .stat .l { font-weight: 800; opacity: .75; font-size: 13px; }
+  .stat .e { font-size: 24px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--card); border-radius: 22px; padding: 18px; box-shadow: var(--shadow); }
+  .card h3 { margin: 0 0 12px; font-size: 16px; }
+  .bar { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; font-weight: 700; }
+  .bar .t { flex: 1; height: 12px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+  .bar .f { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--lav), var(--sky)); }
+  .bar .lab { width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Tablas */
+  .table-wrap { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 14px 12px; background: #FBFAFF; }
+  td { padding: 12px; border-top: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: #FCFBFF; }
+  .who { display: flex; align-items: center; gap: 10px; }
+  .who img { width: 38px; height: 38px; border-radius: 12px; background: var(--lav-soft); flex-shrink: 0; }
+  .who b { display: block; }
+  .who span { font-size: 12px; color: var(--muted); }
+  .pill { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 800; }
+  .p-paciente { background: var(--sky-soft); color: #2563EB; }
+  .p-medico { background: var(--mint-soft); color: #0E7A55; }
+  .p-admin { background: var(--lemon-soft); color: #A16207; }
+  .p-programada { background: var(--primary-soft); color: var(--primary); }
+  .p-cancelada { background: var(--danger-soft); color: var(--danger); }
+  .p-completada { background: var(--mint-soft); color: var(--success); }
+  .p-tg { background: var(--sky-soft); color: #0284C7; }
+  .p-off { background: #EEE; color: #777; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .empty { padding: 30px; text-align: center; color: var(--muted); }
+
+  /* Conversaciones */
+  .chat { border-radius: 18px; padding: 14px; background: #fff; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 6px solid var(--lav); }
+  .chat.em { border-left-color: var(--danger); background: #FFF8F8; }
+  .chat .q { font-weight: 800; }
+  .chat .a { color: var(--muted); white-space: pre-wrap; margin-top: 6px; font-size: 14px; }
+  .chat .meta { font-size: 12px; color: var(--muted); margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(30, 20, 70, .35); display: none; align-items: flex-start; justify-content: center; z-index: 10; padding: 30px 14px; overflow-y: auto; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 26px; padding: 22px; width: 100%; max-width: 640px; box-shadow: 0 20px 60px rgba(40,20,100,.25); position: relative; overflow: hidden; }
+  .modal::before { content: ''; position: absolute; width: 180px; height: 180px; border-radius: 50%; background: var(--lav-soft); top: -80px; right: -60px; }
+  .modal > * { position: relative; }
+  .modal h2 { margin: 0 0 14px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form label { font-size: 12px; font-weight: 800; color: var(--muted); display: flex; flex-direction: column; gap: 5px; }
+  .form .full { grid-column: 1 / -1; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days label { flex-direction: row; align-items: center; gap: 4px; background: var(--bg); padding: 6px 10px; border-radius: 10px; color: var(--text); }
+  .modal .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .x { position: absolute !important; z-index: 3; right: 16px; top: 14px; border: 0; background: #fff; border-radius: 10px; font-size: 18px; cursor: pointer; width: 34px; height: 34px; }
+  .mini-list { max-height: 220px; overflow-y: auto; font-size: 13px; }
+  .mini-list div { padding: 8px 10px; border-radius: 10px; background: var(--bg); margin-bottom: 6px; }
+
+  /* Login */
+  .login { min-height: 100vh; display: grid; place-items: center; padding: 20px; position: relative; z-index: 1; }
+  .login .box { background: #fff; border-radius: 30px; padding: 30px; width: 100%; max-width: 380px; box-shadow: var(--shadow); text-align: center; }
+  .login img { width: 96px; height: 96px; border-radius: 28px; background: var(--lav-soft); }
+  .login input { width: 100%; margin-top: 10px; }
+  .login .btn { width: 100%; margin-top: 14px; padding: 13px; }
+  .err { color: var(--danger); font-weight: 800; font-size: 14px; margin-top: 10px; min-height: 18px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 12px 18px; border-radius: 14px; font-weight: 800; z-index: 20; display: none; }
+
+  @media (max-width: 860px) {
+    .wrap { flex-direction: column; }
+    nav { width: 100%; height: auto; position: static; display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; }
+    nav .logo { width: 100%; margin-bottom: 8px; }
+    nav button { width: auto; padding: 9px 12px; }
+    nav .me { display: none; }
+    main { padding: 18px 16px 60px; }
+    .grid2, .form { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { padding: 14px; }
+    .stat .n { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="login" style="display:none">
+  <div class="box">
+    <img src="https://api.dicebear.com/9.x/bottts-neutral/svg?seed=Medi&backgroundColor=d5f2ee" alt="" />
+    <h1 style="margin-top:12px">MediClick <span style="color:#7C5CFC">Admin</span></h1>
+    <p class="sub">Panel de administración</p>
+    <input id="lemail" type="email" placeholder="Correo" value="admin@mediclick.com" />
+    <input id="lpass" type="password" placeholder="Contraseña" />
+    <button class="btn" id="lbtn">Entrar</button>
+    <div class="err" id="lerr"></div>
+  </div>
+</div>
+
+<!-- ============ PANEL ============ -->
+<div id="app" class="wrap" style="display:none">
+  <nav>
+    <div class="logo"><div class="ic">🩺</div><div>MediClick<small>Panel administrativo</small></div></div>
+    <button data-view="dashboard" class="active">📊 Resumen</button>
+    <button data-view="users">👥 Usuarios</button>
+    <button data-view="doctors">🩺 Médicos</button>
+    <button data-view="appointments">📅 Citas</button>
+    <button data-view="triage">🤖 Conversaciones IA</button>
+    <button id="logout">🚪 Salir</button>
+    <div class="me"><img id="meAvatar" alt="" /><div><b id="meName"></b><br /><span style="color:var(--muted)">Administrador</span></div></div>
+  </nav>
+  <main id="view"></main>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- utilidades ----------
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch {} },
+};
+const avatar = (name, style = 'notionists') =>
+  `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(name || 'x')}&backgroundColor=eee9ff,e2f8ef,ffede6,e6f1ff,fff7db,ffe9f1`;
+const docAvatar = (name) => avatar(name, 'notionists');
+const fmt = (iso) => iso ? new Date(iso).toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDay = (iso) => iso ? new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const ROLE_LABEL = { paciente: '🙂 Paciente', medico: '🩺 Médico', admin: '⭐ Admin' };
+const isTg = (u) => /@telegram\.mediclick\.com$/.test(u.email || '');
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.style.display = 'none'), 2600);
+}
+
+let session = null;
+try { session = JSON.parse(store.get('mc_admin') || 'null'); } catch { session = null; }
+
+async function api(method, path, body) {
+  const r = await fetch('/api' + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: 'Bearer ' + session.token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401) { logout(); throw new Error('Tu sesión expiró'); }
+  if (!r.ok) throw new Error(data.error || data.message || 'Error ' + r.status);
+  return data;
+}
+
+// ---------- login ----------
+async function doLogin() {
+  $('#lerr').textContent = '';
+  try {
+    const s = await (await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: $('#lemail').value, password: $('#lpass').value }),
+    })).json();
+    if (!s.token) throw new Error(s.error || 'No se pudo iniciar sesión');
+    if (s.user.role !== 'admin') throw new Error('Esta cuenta no es de administrador');
+    session = s; store.set('mc_admin', JSON.stringify(s)); boot();
+  } catch (e) { $('#lerr').textContent = e.message; }
+}
+$('#lbtn').onclick = doLogin;
+$('#lpass').onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+function logout() { session = null; store.del('mc_admin'); boot(); }
+$('#logout').onclick = logout;
+
+// ---------- navegación ----------
+let current = 'dashboard';
+document.querySelectorAll('nav button[data-view]').forEach((b) => (b.onclick = () => go(b.dataset.view)));
+function go(v) {
+  current = v;
+  document.querySelectorAll('nav button[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === v));
+  ({ dashboard, users, doctors, appointments, triage })[v]().catch((e) => ($('#view').innerHTML = `<div class="card empty">⚠️ ${esc(e.message)}</div>`));
+}
+
+function boot() {
+  if (!session) { $('#login').style.display = 'grid'; $('#app').style.display = 'none'; return; }
+  $('#login').style.display = 'none'; $('#app').style.display = 'flex';
+  $('#meName').textContent = session.user.name; $('#meAvatar').src = avatar(session.user.name);
+  go(current);
+}
+
+// ---------- modal ----------
+function openModal(html) { $('#modal').innerHTML = `<button class="x" onclick="closeModal()">✕</button>` + html; $('#modalBg').classList.add('open'); }
+function closeModal() { $('#modalBg').classList.remove('open'); }
+$('#modalBg').onclick = (e) => { if (e.target.id === 'modalBg') closeModal(); };
+
+// ================= RESUMEN =================
+async function dashboard() {
+  $('#view').innerHTML = '<div class="empty">Cargando…</div>';
+  const [u, a, t, em] = await Promise.all([
+    api('GET', '/admin/users/stats'), api('GET', '/admin/appointments/stats'),
+    api('GET', '/admin/triage/stats'), api('GET', '/admin/triage/sessions?emergency=true&limit=5'),
+  ]);
+  const card = (e, n, l, bg) => `<div class="stat" style="background:${bg}"><div class="e">${e}</div><div class="n">${n ?? 0}</div><div class="l">${l}</div></div>`;
+  const max = Math.max(1, ...a.citas.porEspecialidad.map((x) => x.n));
+  $('#view').innerHTML = `
+    <h1>¡Hola, ${esc(session.user.name.split(' ')[0])}! 👋</h1><p class="sub">Así va MediClick AI hoy</p>
+    <div class="stats">
+      ${card('👥', u.paciente, 'Pacientes', 'var(--sky-soft)')}
+      ${card('🩺', a.medicos.activos, 'Médicos activos', 'var(--mint-soft)')}
+      ${card('📅', a.citas.proximas, 'Citas próximas', 'var(--lav-soft)')}
+      ${card('☀️', a.citas.hoy, 'Citas hoy', 'var(--lemon-soft)')}
+      ${card('✈️', a.citas.telegram, 'Agendadas por Telegram', 'var(--peach-soft)')}
+      ${card('🤖', t.total, 'Conversaciones IA', 'var(--rose-soft)')}
+      ${card('🚨', t.emergencias, 'Emergencias detectadas', 'var(--danger-soft)')}
+      ${card('❌', a.citas.canceladas, 'Citas canceladas', '#F1F1F6')}
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>📊 Citas por especialidad</h3>
+        ${a.citas.porEspecialidad.map((x) => `<div class="bar"><div class="lab">${esc(x.specialty)}</div><div class="t"><div class="f" style="width:${(x.n / max) * 100}%"></div></div><b>${x.n}</b></div>`).join('') || '<div class="empty">Sin citas aún</div>'}
+      </div>
+      <div class="card"><h3>🚨 Últimas emergencias</h3>
+        ${em.map((s) => `<div class="chat em" style="box-shadow:none"><div class="q">"${esc(s.message)}"</div><div class="meta">${fmt(s.createdAt)} · ${esc(s.channel)}</div></div>`).join('') || '<div class="empty">Ninguna 🎉</div>'}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>👥 Usuarios por rol</h3>
+      <span class="pill p-paciente">Pacientes: ${u.paciente}</span> <span class="pill p-medico">Médicos: ${u.medico}</span>
+      <span class="pill p-admin">Admins: ${u.admin}</span> <span class="pill p-tg">Con Telegram: ${u.telegram}</span>
+    </div>`;
+}
+
+// ================= USUARIOS =================
+let usersCache = [];
+async function users() {
+  $('#view').innerHTML = `
+    <h1>👥 Usuarios</h1><p class="sub">Pacientes, médicos y administradores. Los registrados por Telegram llevan la etiqueta ✈️.</p>
+    <div class="toolbar">
+      <input id="uq" placeholder="🔎 Buscar por nombre o correo" style="flex:1;min-width:200px" />
+      <select id="urole"><option value="">Todos los roles</option><option value="paciente">Pacientes</option><option value="medico">Médicos</option><option value="admin">Admins</option></select>
+      <button class="btn" onclick="userForm()">+ Nuevo usuario</button>
+    </div>
+    <div class="table-wrap" id="utable"><div class="empty">Cargando…</div></div>`;
+  const load = async () => {
+    const q = $('#uq').value.trim(), role = $('#urole').value;
+    usersCache = await api('GET', `/admin/users?${new URLSearchParams({ ...(q && { q }), ...(role && { role }) })}`);
+    $('#utable').innerHTML = usersCache.length ? `<table><thead><tr><th>Usuario</th><th>Rol</th><th>Expediente</th><th>Registro</th><th>Acciones</th></tr></thead><tbody>
+      ${usersCache.map((u) => `<tr>
+        <td><div class="who"><img src="${avatar(u.name)}" alt="" /><div><b>${esc(u.name)}</b><span>${isTg(u) ? '✈️ Solo Telegram' : esc(u.email)}</span></div></div></td>
+        <td><span class="pill p-${esc(u.role)}">${ROLE_LABEL[u.role] || esc(u.role)}</span> ${u.telegramChatId ? '<span class="pill p-tg">✈️</span>' : ''}</td>
+        <td style="font-size:13px">${u.allergies ? `🌾 ${esc(u.allergies)}<br>` : ''}${u.bloodType ? `🩸 ${esc(u.bloodType)}` : ''}${!u.allergies && !u.bloodType ? '<span style="color:var(--muted)">—</span>' : ''}</td>
+        <td style="font-size:13px">${fmtDay(u.createdAt)}</td>
+        <td><div class="actions">
+          <button class="btn sm soft" onclick="userDetail('${u.id}')">👁️ Ver</button>
+          <button class="btn sm mint" onclick="userForm('${u.id}')">✏️ Editar</button>
+          ${u.role !== 'admin' ? `<button class="btn sm soft" onclick="makeAdmin('${u.id}')">⭐ Hacer admin</button>` : ''}
+          ${u.id !== session.user.id ? `<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑️</button>` : ''}
+        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">No hay usuarios con ese filtro</div>';
+  };
+  $('#uq').oninput = () => { clearTimeout(load.t); load.t = setTimeout(load, 300); };
+  $('#urole').onchange = load;
+  await load();
+}
+
+async function userDetail(id) {
+  const u = usersCache.find((x) => x.id === id) || await api('GET', '/admin/users/' + id);
+  const [appts, chats] = await Promise.all([
+    api('GET', '/admin/appointments?patientId=' + id),
+    api('GET', '/admin/triage/sessions?limit=20&userId=' + id),
+  ]);
+  const row = (l, v) => `<div><b>${l}:</b> ${esc(v) || '<span style="color:var(--muted)">sin registrar</span>'}</div>`;
+  openModal(`
+    <div class="who" style="margin-bottom:14px"><img src="${avatar(u.name)}" style="width:64px;height:64px;border-radius:20px" alt="" />
+      <div><h2 style="margin:0">${esc(u.name)}</h2><span>${esc(u.email)} · <span class="pill p-${esc(u.role)}">${ROLE_LABEL[u.role]}</span></span></div></div>
+    <div class="card" style="box-shadow:none;background:var(--rose-soft)"><h3>❤️ Expediente</h3>
+      <div class="mini-list" style="max-height:none">${row('Teléfono', u.phone)}${row('Nacimiento', u.birthDate)}${row('Tipo de sangre', u.bloodType)}${row('Alergias', u.allergies)}${row('Enfermedades crónicas', u.chronicConditions)}${row('Medicamentos actuales', u.currentMedications)}${row('Contacto de emergencia', u.emergencyContact)}${row('ID Telegram', u.telegramChatId)}</div></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card" style="box-shadow:none;background:var(--sky-soft)"><h3>📅 Citas (${appts.length})</h3><div class="mini-list">
+        ${appts.map((a) => `<div>${fmt(a.startsAt)}<br><b>${esc(a.specialty)}</b> · ${esc(a.doctorName)} <span class="pill p-${a.status}">${a.status}</span></div>`).join('') || 'Sin citas'}</div></div>
+      <div class="card" style="box-shadow:none;background:var(--lav-soft)"><h3>🤖 Conversaciones (${chats.length})</h3><div class="mini-list">
+        ${chats.map((c) => `<div>${c.emergency ? '🚨 ' : ''}"${esc(c.message)}"<br><small>${fmt(c.createdAt)} · ${esc(c.specialty || '')}</small></div>`).join('') || 'Sin conversaciones'}</div></div>
+    </div>`);
+}
+
+const PROFILE = [['name', 'Nombre completo'], ['email', 'Correo'], ['phone', 'Teléfono'], ['birthDate', 'Fecha de nacimiento (AAAA-MM-DD)'],
+  ['bloodType', 'Tipo de sangre'], ['allergies', 'Alergias'], ['chronicConditions', 'Enfermedades crónicas'],
+  ['currentMedications', 'Medicamentos actuales'], ['emergencyContact', 'Contacto de emergencia'], ['telegramChatId', 'ID de Telegram']];
+
+function userForm(id) {
+  const u = id ? usersCache.find((x) => x.id === id) : { role: 'paciente' };
+  const self = id === session.user.id;
+  openModal(`<h2>${id ? '✏️ Editar usuario' : '➕ Nuevo usuario'}</h2>
+    <div class="form">
+      ${PROFILE.filter(([k]) => id || ['name', 'email'].includes(k)).map(([k, l]) => `<label class="${['allergies', 'chronicConditions', 'currentMedications'].includes(k) ? 'full' : ''}">${l}<input id="f_${k}" value="${esc(u[k] ?? '')}" /></label>`).join('')}
+      <label>Rol<select id="f_role" ${self ? 'disabled' : ''}>${Object.entries(ROLE_LABEL).map(([r, l]) => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label>${id ? 'Nueva contraseña (opcional)' : 'Contraseña'}<input id="f_password" type="password" placeholder="mínimo 6 caracteres" /></label>
+    </div>
+    <div class="err" id="ferr"></div>
+    <div class="foot"><button class="btn soft" onclick="closeModal()">Cancelar</button><button class="btn" id="fsave">Guardar</button></div>`);
+  $('#fsave').onclick = async () => {
+    try {
+      const body = Object.fromEntries(PROFILE.filter(([k]) => $('#f_' + k)).map(([k]) => [k, $('#f_' + k).value]));
+      if (!self) body.role = $('#f_role').value;
+      const pass = $('#f_password').value;
+      if (id) {
+        await api('PUT', '/admin/users/' + id, body);
+        if (pass) await api('POST', `/admin/users/${id}/password`, { password: pass });
+      } else {
+        await api('POST', '/admin/users', { ...body, password: pass });
+      }
+      closeModal(); toast('✅ Usuario guardado');
+      if (body.role === 'medico' && u.role !== 'medico') toast('🩺 Ahora crea su perfil en la sección Médicos');
+      users();
+    } catch (e) { $('#ferr').textContent = e.message; }
+  };
+}
+
+async function makeAdmin(id) {
+  const u = usersCache.find((x) => x.id === id);
+  if (!confirm(`¿Dar permisos de ADMINISTRADOR a ${u.name}?`)) return;
+  try { await api('PUT', '/admin/users/' + id, { role: 'admin' }); toast('⭐ Ahora es administrador'); users(); } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+async function deleteUser(id) {
+  const u = usersCache.find((x) => x.id === id);
+  if (!confirm(`¿Eliminar a ${u.name}? Sus citas futuras se cancelarán automáticamente.`)) return;
+  try { await api('DELETE', '/admin/users/' + id); toast('🗑️ Usuario eliminado'); users(); } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+// ================= MÉDICOS =================
+let doctorsCache = [];
+async function doctors() {
+  $('#view').innerHTML = `<h1>🩺 Médicos</h1><p class="sub">Especialidad, consultorio y horario de atención de cada médico.</p>
+    <div class="toolbar"><button class="btn" onclick="doctorForm()">+ Nuevo médico</button></div>
+    <div class="table-wrap" id="dtable"><div class="empty">Cargando…</div></div>`;
+  doctorsCache = await api('GET', '/admin/doctors');
+  $('#dtable').innerHTML = `<table><thead><tr><th>Médico</th><th>Consultorio</th><th>Horario</th><th>Días</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+    ${doctorsCache.map((d) => `<tr style="${d.active ? '' : 'opacity:.55'}">
+      <td><div class="who"><img src="${docAvatar(d.name)}" alt="" /><div><b>${esc(d.name)}</b><span>${esc(d.specialty)}</span></div></div></td>
+      <td>${esc(d.office || '—')}</td>
+      <td>${d.startHour}:00 – ${d.endHour}:00<br><small style="color:var(--muted)">citas de ${d.slotMinutes} min</small></td>
+      <td style="font-size:13px">${d.workDays.map((x) => DAYS[x]).join(', ')}</td>
+      <td>${d.active ? '<span class="pill p-medico">Activo</span>' : '<span class="pill p-off">De baja</span>'}</td>
+      <td><div class="actions">
+        <button class="btn sm mint" onclick="doctorForm('${d.id}')">✏️ Editar</button>
+        ${d.active ? `<button class="btn sm danger" onclick="deactivateDoctor('${d.id}')">⏸️ Dar de baja</button>`
+                   : `<button class="btn sm soft" onclick="reactivateDoctor('${d.id}')">▶️ Reactivar</button>`}
+      </div></td></tr>`).join('')}</tbody></table>`;
+}
+
+async function doctorForm(id) {
+  const d = id ? doctorsCache.find((x) => x.id === id) : { startHour: 9, endHour: 15, slotMinutes: 30, workDays: [1, 2, 3, 4, 5, 6] };
+  // Usuarios con rol médico que aún no tienen perfil
+  const linked = new Set(doctorsCache.map((x) => x.userId).filter(Boolean));
+  const free = id ? [] : (await api('GET', '/admin/users?role=medico')).filter((u) => !linked.has(u.id));
+  openModal(`<h2>${id ? '✏️ Editar médico' : '➕ Nuevo médico'}</h2>
+    ${!id ? `<div class="toolbar"><label style="font-weight:800"><input type="radio" name="mode" value="new" checked /> Crear cuenta nueva</label>
+      <label style="font-weight:800"><input type="radio" name="mode" value="link" ${free.length ? '' : 'disabled'} /> Usar usuario médico existente (${free.length})</label></div>` : ''}
+    <div class="form">
+      <div class="full" id="linkBox" style="display:none"><label>Usuario<select id="d_user">${free.map((u) => `<option value="${u.id}" data-name="${esc(u.name)}">${esc(u.name)} · ${esc(u.email)}</option>`).join('')}</select></label></div>
+      <label id="nameBox">Nombre (ej. Dra. Ana López)<input id="d_name" value="${esc(d.name || '')}" /></label>
+      <label>Especialidad<input id="d_specialty" list="specs" value="${esc(d.specialty || '')}" /></label>
+      ${!id ? `<label class="newOnly">Correo para entrar a la app<input id="d_email" type="email" /></label>
+               <label class="newOnly">Contraseña<input id="d_pass" type="password" placeholder="mínimo 6" /></label>` : ''}
+      <label>Consultorio<input id="d_office" value="${esc(d.office || '')}" /></label>
+      <label>Duración de cita (min)<input id="d_slot" type="number" value="${d.slotMinutes}" /></label>
+      <label>Entrada (hora)<input id="d_start" type="number" min="0" max="23" value="${d.startHour}" /></label>
+      <label>Salida (hora)<input id="d_end" type="number" min="1" max="24" value="${d.endHour}" /></label>
+      <div class="full"><label>Días de atención</label><div class="days">${DAYS.map((l, i) => `<label><input type="checkbox" class="d_day" value="${i}" ${d.workDays.includes(i) ? 'checked' : ''} /> ${l}</label>`).join('')}</div></div>
+    </div>
+    <datalist id="specs">${[...new Set(doctorsCache.map((x) => x.specialty))].map((s) => `<option value="${esc(s)}">`).join('')}</datalist>
+    <div class="err" id="ferr"></div>
+    <div class="foot"><button class="btn soft" onclick="closeModal()">Cancelar</button><button class="btn" id="dsave">Guardar</button></div>`);
+  document.querySelectorAll('input[name=mode]').forEach((r) => (r.onchange = () => {
+    const link = r.value === 'link' && r.checked;
+    $('#linkBox').style.display = link ? 'block' : 'none';
+    $('#nameBox').style.display = link ? 'none' : 'flex';
+    document.querySelectorAll('.newOnly').forEach((e) => (e.style.display = link ? 'none' : 'flex'));
+  }));
+  $('#dsave').onclick = async () => {
+    try {
+      const body = {
+        name: $('#d_name').value, specialty: $('#d_specialty').value, office: $('#d_office').value,
+        startHour: $('#d_start').value, endHour: $('#d_end').value, slotMinutes: $('#d_slot').value,
+        workDays: [...document.querySelectorAll('.d_day:checked')].map((c) => Number(c.value)),
+      };
+      if (id) { await api('PUT', '/admin/doctors/' + id, body); }
+      else {
+        const mode = document.querySelector('input[name=mode]:checked').value;
+        if (mode === 'link') {
+          const opt = $('#d_user').selectedOptions[0];
+          body.userId = opt.value; body.name = opt.dataset.name;
+        } else {
+          // 1) cuenta de usuario (patient-service) 2) perfil de médico (appointment-service)
+          const user = await api('POST', '/admin/users', { name: body.name, email: $('#d_email').value, password: $('#d_pass').value, role: 'medico' });
+          body.userId = user.id;
+        }
+        await api('POST', '/admin/doctors', body);
+      }
+      closeModal(); toast('✅ Médico guardado'); doctors();
+    } catch (e) { $('#ferr').textContent = e.message; }
+  };
+}
+
+async function deactivateDoctor(id) {
+  const d = doctorsCache.find((x) => x.id === id);
+  if (!confirm(`¿Dar de baja a ${d.name}? Ya no aparecerá para agendar y se cancelarán sus citas futuras.`)) return;
+  try { const r = await api('DELETE', '/admin/doctors/' + id); toast(`⏸️ Dado de baja · ${r.citasCanceladas} citas canceladas`); doctors(); } catch (e) { toast('⚠️ ' + e.message); }
+}
+async function reactivateDoctor(id) {
+  try { await api('PUT', '/admin/doctors/' + id, { active: true }); toast('▶️ Médico reactivado'); doctors(); } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+// ================= CITAS =================
+async function appointments() {
+  $('#view').innerHTML = `<h1>📅 Citas</h1><p class="sub">Todas las citas de la app y de Telegram.</p>
+    <div class="toolbar"><select id="astatus"><option value="">Todos los estados</option><option value="programada">Programadas</option><option value="cancelada">Canceladas</option><option value="completada">Completadas</option></select></div>
+    <div class="table-wrap" id="atable"><div class="empty">Cargando…</div></div>`;
+  const load = async () => {
+    const s = $('#astatus').value;
+    const list = await api('GET', '/admin/appointments' + (s ? '?status=' + s : ''));
+    $('#atable').innerHTML = list.length ? `<table><thead><tr><th>Fecha</th><th>Paciente</th><th>Médico</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+      ${list.map((a) => `<tr>
+        <td><b>${fmt(a.startsAt)}</b></td>
+        <td><div class="who"><img src="${avatar(a.patientName)}" alt="" /><b>${esc(a.patientName)}</b></div></td>
+        <td>${esc(a.doctorName)}<br><small style="color:var(--muted)">${esc(a.specialty)} · ${esc(a.office || '')}</small></td>
+        <td style="font-size:13px;max-width:240px">${esc((a.reason || '').replace(' (vía Telegram)', ''))} ${/vía Telegram/.test(a.reason || '') ? '<span class="pill p-tg">✈️ Telegram</span>' : ''}</td>
+        <td><span class="pill p-${a.status}">${a.status}</span></td>
+        <td><div class="actions">
+          ${a.status === 'programada' ? `<button class="btn sm soft" onclick="cancelAppt('${a.id}')">❌ Cancelar</button>` : ''}
+          <button class="btn sm danger" onclick="deleteAppt('${a.id}')">🗑️</button>
+        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">No hay citas</div>';
+  };
+  $('#astatus').onchange = load;
+  await load();
+}
+async function cancelAppt(id) {
+  if (!confirm('¿Cancelar esta cita? Se le avisará al paciente.')) return;
+  try { await api('PATCH', `/admin/appointments/${id}/cancel`); toast('❌ Cita cancelada'); appointments(); } catch (e) { toast('⚠️ ' + e.message); }
+}
+async function deleteAppt(id) {
+  if (!confirm('¿Eliminar esta cita del sistema? No se puede deshacer.')) return;
+  try { await api('DELETE', '/admin/appointments/' + id); toast('🗑️ Cita eliminada'); appointments(); } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+// ================= CONVERSACIONES IA =================
+async function triage() {
+  $('#view').innerHTML = `<h1>🤖 Conversaciones con Medi</h1><p class="sub">Lo que los pacientes le escriben al asistente en la app y en Telegram.</p>
+    <div class="toolbar"><select id="tf"><option value="">Todas</option><option value="em">🚨 Solo emergencias</option><option value="app">📱 App</option><option value="telegram">✈️ Telegram</option></select></div>
+    <div id="tlist"><div class="empty">Cargando…</div></div>`;
+  const names = Object.fromEntries((await api('GET', '/admin/users')).map((u) => [u.id, u.name]));
+  const load = async () => {
+    const f = $('#tf').value;
+    const qs = f === 'em' ? '?emergency=true' : f ? '?channel=' + f : '';
+    const list = await api('GET', '/admin/triage/sessions' + qs);
+    $('#tlist').innerHTML = list.map((s) => `<div class="chat ${s.emergency ? 'em' : ''}">
+      <div class="who" style="margin-bottom:6px"><img src="${avatar(names[s.userId] || 'Anónimo')}" style="width:30px;height:30px;border-radius:10px" alt="" /><b>${esc(names[s.userId] || 'Anónimo')}</b></div>
+      <div class="q">💬 ${esc(s.message)}</div>
+      <div class="a">${esc((s.reply || '').replaceAll('**', ''))}</div>
+      <div class="meta">${fmt(s.createdAt)} <span class="pill ${s.channel === 'telegram' ? 'p-tg' : 'p-paciente'}">${s.channel === 'telegram' ? '✈️ Telegram' : '📱 App'}</span>
+        ${s.specialty ? `<span class="pill p-medico">${esc(s.specialty)}</span>` : ''} ${s.emergency ? '<span class="pill p-cancelada">🚨 Emergencia</span>' : ''}</div>
+    </div>`).join('') || '<div class="card empty">Sin conversaciones</div>';
+  };
+  $('#tf').onchange = load;
+  await load();
+}
+
+boot();
+</script>
+</body>
+</html>

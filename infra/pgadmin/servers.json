@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "MediClick AI",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "mediclick",
+      "SSLMode": "prefer"
+    }
+  }
+}

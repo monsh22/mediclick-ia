@@ -1,0 +1,16 @@
+{
+  "name": "triage-service",
+  "version": "1.0.0",
+  "description": "MediClick AI - Triage/AI Service (LLM + RAG con pgvector + detección de emergencias 911)",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node --watch src/main.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

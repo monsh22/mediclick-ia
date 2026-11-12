@@ -1,0 +1,18 @@
+{
+  "name": "MediClick AI",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "hostRequirements": { "cpus": 2, "memory": "8gb", "storage": "32gb" },
+  "forwardPorts": [8080, 5678, 15672, 5050],
+  "portsAttributes": {
+    "8080": { "label": "API Gateway + Panel admin", "onAutoForward": "silent" },
+    "5678": { "label": "n8n (Telegram)", "onAutoForward": "silent" },
+    "15672": { "label": "RabbitMQ", "onAutoForward": "silent" },
+    "5050": { "label": "pgAdmin", "onAutoForward": "silent" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "postStartCommand": "bash .devcontainer/start.sh"
+}

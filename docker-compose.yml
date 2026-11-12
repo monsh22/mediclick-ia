@@ -1,0 +1,199 @@
+name: mediclick-ai
+
+# =============================================================
+#  MediClick AI - Infraestructura completa (Opción 2)
+#  Levantar todo:  docker compose up -d --build
+# =============================================================
+
+x-node-env: &node-env
+  NODE_ENV: production
+  TZ: America/Mexico_City
+  RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+
+services:
+  # ---------------- Infraestructura ----------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mediclick-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      TZ: America/Mexico_City
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: mediclick-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    ports:
+      - "5672:5672"     # AMQP (servicios)
+      - "15672:15672"   # Panel web: http://localhost:15672
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: mediclick-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mediclick-pgadmin
+    ports:
+      - "5050:80"       # Panel web: http://localhost:5050
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mediclick.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"                 # sin pantalla de login
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      - postgres
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: mediclick-n8n
+    ports:
+      - "5678:5678"     # Panel web: http://localhost:5678
+    environment:
+      GENERIC_TIMEZONE: America/Mexico_City
+      TZ: America/Mexico_City
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      # Si usas un túnel (ngrok / cloudflared) para Telegram, pon aquí su URL pública
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678/}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+
+  # Túnel de ngrok con dominio FIJO para que Telegram llegue a n8n.
+  # Solo arranca si lo pides con el perfil "tunel":
+  #   docker compose --profile tunel up -d
+  # Necesita NGROK_AUTHTOKEN y NGROK_DOMAIN en el .env
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: mediclick-ngrok
+    profiles: ["tunel"]
+    command: ["http", "n8n:5678", "--url=${NGROK_DOMAIN:-sin-dominio}"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    depends_on:
+      - n8n
+    restart: unless-stopped
+
+  # ---------------- Microservicios ----------------
+  patient-service:
+    build: ./services/patient-service
+    container_name: mediclick-patient
+    environment:
+      <<: *node-env
+      PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/patients_db
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+
+  appointment-service:
+    build: ./services/appointment-service
+    container_name: mediclick-appointment
+    environment:
+      <<: *node-env
+      PORT: 3002
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/appointments_db
+      TZ_OFFSET: "-06:00"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+
+  notification-service:
+    build: ./services/notification-service
+    container_name: mediclick-notification
+    environment:
+      <<: *node-env
+      PORT: 3003
+      REDIS_URL: redis://redis:6379
+      PATIENT_SERVICE_URL: http://patient-service:3001
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/mediclick-eventos
+      DEMO_FAST_REMINDERS: ${DEMO_FAST_REMINDERS:-false}
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+
+  triage-service:
+    build: ./services/triage-service
+    container_name: mediclick-triage
+    environment:
+      <<: *node-env
+      PORT: 3004
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/triage_db
+      APPOINTMENT_SERVICE_URL: http://appointment-service:3002
+      PATIENT_SERVICE_URL: http://patient-service:3001
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      XAI_MODEL: ${XAI_MODEL:-grok-3-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-haiku-5-5}
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+
+  # ---------------- Puerta de entrada ----------------
+  gateway:
+    build: ./gateway
+    container_name: mediclick-gateway
+    ports:
+      - "8080:8080"     # La app móvil se conecta aquí
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+      PATIENT_SERVICE_URL: http://patient-service:3001
+      APPOINTMENT_SERVICE_URL: http://appointment-service:3002
+      NOTIFICATION_SERVICE_URL: http://notification-service:3003
+      TRIAGE_SERVICE_URL: http://triage-service:3004
+    depends_on:
+      - patient-service
+      - appointment-service
+      - notification-service
+      - triage-service
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  rabbit_data:
+  redis_data:
+  n8n_data:
+  pgadmin_data:

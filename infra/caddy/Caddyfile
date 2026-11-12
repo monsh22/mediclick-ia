@@ -1,0 +1,21 @@
+# Caddy obtiene y renueva los certificados HTTPS solo.
+# Los dominios vienen del .env (API_DOMAIN, N8N_DOMAIN, APP_DOMAIN).
+
+# API para la app + panel admin (https://API_DOMAIN/admin)
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy gateway:8080
+}
+
+# n8n (Telegram manda aquí sus mensajes)
+{$N8N_DOMAIN} {
+	reverse_proxy n8n:5678
+}
+
+# Versión web de la app (carpeta mobile/dist, generada con "npx expo export --platform web")
+{$APP_DOMAIN} {
+	encode gzip
+	root * /srv/app
+	try_files {path} /index.html
+	file_server
+}
